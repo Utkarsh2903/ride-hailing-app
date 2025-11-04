@@ -29,9 +29,9 @@ module Api
         PaymentProcessingJob.perform_later(payment.id)
 
         render_success(
-          payment: PaymentSerializer.new(payment).serializable_hash[:data][:attributes],
-          created: true
-        ), status: :created
+          { payment: PaymentSerializer.new(payment).serializable_hash[:data][:attributes] },
+          status: :created
+        )
       end
 
       # GET /api/v1/payments/:id
