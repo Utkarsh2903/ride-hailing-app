@@ -1,8 +1,7 @@
 {
-  "providers": [],
   "phases": {
     "setup": {
-      "nixPkgs": ["postgresql", "geos", "proj"]
+      "nixPkgs": ["...", "postgresql", "geos", "proj"]
     },
     "install": {
       "cmds": ["bundle install"]
