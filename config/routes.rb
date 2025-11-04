@@ -5,12 +5,7 @@ Rails.application.routes.draw do
 
   # Health check endpoint
   get "up" => "rails/health#show", as: :rails_health_check
-
-  # Webhooks (skip authentication)
-  namespace :webhooks do
-    post 'stripe', to: 'stripe#create'
-    post 'paypal', to: 'paypal#create'
-  end
+  get "health" => "rails/health#show"
 
   # API routes
   namespace :api do
