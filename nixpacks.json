@@ -4,17 +4,11 @@
       "nixPkgs": ["postgresql", "geos", "proj"]
     },
     "install": {
-      "cmds": ["bundle install --without development test"]
-    },
-    "build": {
-      "cmds": ["echo 'Skipping build phase - no assets or migrations during build'"]
+      "cmds": ["bundle install"]
     }
   },
   "start": {
     "cmd": "bundle exec puma -C config/puma.rb"
-  },
-  "variables": {
-    "NIXPACKS_NO_MIGRATE": "1"
   }
 }
 
