@@ -16,12 +16,14 @@ Rails.application.config.middleware.insert_before 0, Rack::Cors do
     end
     
     origins_list = ENV.fetch('CORS_ORIGINS', default_origins)
-    origins origins_list == '*' ? '*' : origins_list.split(',')
+    is_wildcard = origins_list == '*'
+    
+    origins is_wildcard ? '*' : origins_list.split(',')
 
     resource '*',
       headers: :any,
       methods: [:get, :post, :put, :patch, :delete, :options, :head],
-      credentials: true,
+      credentials: !is_wildcard,  # Can't use credentials with wildcard origins
       expose: ['Authorization', 'Idempotency-Key']
   end
 end
