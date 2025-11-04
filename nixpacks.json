@@ -7,7 +7,9 @@
     "install": {
       "cmds": ["bundle install"]
     },
-    "build": null
+    "build": {
+      "cmds": []
+    }
   },
   "start": {
     "cmd": "bundle exec puma -C config/puma.rb"
