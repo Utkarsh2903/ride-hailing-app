@@ -1,13 +1,11 @@
 {
   "phases": {
     "setup": {
-      "nixPkgs": ["...", "postgresql", "geos", "proj"]
+      "nixPkgs": ["...", "postgresql", "geos", "proj"],
+      "aptPkgs": []
     },
     "install": {
       "cmds": ["bundle install"]
-    },
-    "build": {
-      "cmds": []
     }
   },
   "start": {
