@@ -1,11 +1,13 @@
 {
+  "providers": [],
   "phases": {
     "setup": {
       "nixPkgs": ["postgresql", "geos", "proj"]
     },
     "install": {
       "cmds": ["bundle install"]
-    }
+    },
+    "build": null
   },
   "start": {
     "cmd": "bundle exec puma -C config/puma.rb"
