@@ -1,0 +1,89 @@
+#
+# This file configures the New Relic Agent.
+#
+# New Relic monitoring of your application requires that you install and configure
+# this agent. Visit https://docs.newrelic.com/docs/apm to see documentation.
+#
+
+common: &default_settings
+  # Your application name. Renaming here affects where data displays in New Relic.
+  app_name: Ride Hailing App
+
+  # To disable the agent regardless of other settings, uncomment this:
+  # agent_enabled: false
+
+  # Logging level for log/newrelic_agent.log
+  log_level: info
+
+  # Enables or disables distributed tracing
+  distributed_tracing:
+    enabled: true
+
+  # When true, all request headers except for those listed in attributes.exclude
+  # will be captured for all traces, unless explicitly disabled.
+  allow_all_headers: true
+
+  # Attributes capture
+  attributes:
+    # Prefix of attributes to exclude from all destinations.
+    exclude:
+      - request.headers.authorization
+      - request.headers.cookie
+      - request.headers.set_cookie
+
+  # Application logging
+  application_logging:
+    enabled: true
+    forwarding:
+      enabled: true
+      max_samples_stored: 10000
+    metrics:
+      enabled: true
+    local_decorating:
+      enabled: true
+
+  # Transaction tracer captures deep information about slow
+  # transactions and sends this to the New Relic service once a minute.
+  transaction_tracer:
+    enabled: true
+    transaction_threshold: apdex_f
+    record_sql: obfuscated
+    stack_trace_threshold: 0.5
+    explain_enabled: true
+    explain_threshold: 0.5
+
+  # Error collector captures information about uncaught exceptions and
+  # sends them to New Relic for viewing
+  error_collector:
+    enabled: true
+    ignore_errors: "ActionController::RoutingError,Sinatra::NotFound"
+
+  # Browser Monitoring
+  browser_monitoring:
+    auto_instrument: true
+
+  # Thread profiling
+  thread_profiler:
+    enabled: true
+
+development:
+  <<: *default_settings
+  app_name: Ride Hailing App (Development)
+  monitor_mode: true
+  license_key: <%= ENV['NEW_RELIC_LICENSE_KEY'] %>
+
+test:
+  <<: *default_settings
+  monitor_mode: false
+
+staging:
+  <<: *default_settings
+  app_name: Ride Hailing App (Staging)
+  monitor_mode: true
+  license_key: <%= ENV['NEW_RELIC_LICENSE_KEY'] %>
+
+production:
+  <<: *default_settings
+  monitor_mode: true
+  license_key: <%= ENV['NEW_RELIC_LICENSE_KEY'] %>
+

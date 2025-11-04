@@ -1,0 +1,8 @@
+# Sidekiq-cron schedule configuration
+
+surge_pricing_update:
+  cron: "*/5 * * * *"  # Every 5 minutes
+  class: "SurgePricingUpdateJob"
+  queue: default
+  description: "Update surge pricing for all zones"
+

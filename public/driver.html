@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Dashboard - Ride Hailing App</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+        }
+
+        .status-toggle {
+            background: white;
+            color: #28a745;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .status-toggle.online {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            height: calc(100vh - 80px);
+        }
+
+        .sidebar {
+            background: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .map-container {
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            opacity: 0.9;
+            font-size: 0.9em;
+        }
+
+        .ride-offer {
+            background: white;
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .ride-offer h3 {
+            color: #28a745;
+            margin-bottom: 15px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .info-label {
+            color: #666;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .btn-accept {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+
+        .btn-accept:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(40, 167, 69, 0.4);
+        }
+
+        .btn-decline {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-action {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .active-ride {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .ride-status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            background: #007bff;
+            color: white;
+        }
+
+        .rider-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .rider-info h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        #notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1000;
+        }
+
+        .notification-success {
+            border-left: 4px solid #28a745;
+        }
+
+        .notification-error {
+            border-left: 4px solid #dc3545;
+        }
+
+        .earnings-display {
+            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+            color: #000;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .earnings-display h2 {
+            font-size: 2.5em;
+            margin-bottom: 5px;
+        }
+
+        .earnings-display p {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>🚖 Driver Dashboard</h1>
+            <p>Accept rides and earn money</p>
+        </div>
+        <button class="status-toggle" id="status-toggle" onclick="toggleStatus()">
+            Go Online
+        </button>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="earnings-display">
+                <h2>$<span id="today-earnings">0.00</span></h2>
+                <p>Today's Earnings</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 id="trips-today">0</h3>
+                    <p>Trips Today</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="rating">5.0</h3>
+                    <p>Rating</p>
+                </div>
+            </div>
+
+            <div class="section" id="ride-offers-section" style="display: none;">
+                <h2>🔔 New Ride Offers</h2>
+                <div id="ride-offers"></div>
+            </div>
+
+            <div class="section" id="active-ride-section" style="display: none;">
+                <h2>Current Ride</h2>
+                <div id="active-ride"></div>
+            </div>
+
+            <div class="section">
+                <h2>Recent Trips</h2>
+                <div id="recent-trips">
+                    <p style="color: #666; text-align: center;">No trips yet today</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <div id="notification"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([37.7749, -122.4194], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let driverMarker;
+        let pickupMarker, dropoffMarker;
+        let isOnline = false;
+        let currentPosition = { lat: 37.7749, lng: -122.4194 };
+        let locationUpdateInterval;
+        let currentRide = null;
+        let todayEarnings = 0;
+        let tripsToday = 0;
+
+        const API_BASE = 'http://localhost:3000/api/v1';
+        const token = localStorage.getItem('driver_auth_token');
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification-${type}`;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 5000);
+        }
+
+        // Toggle online/offline status
+        function toggleStatus() {
+            isOnline = !isOnline;
+            const button = document.getElementById('status-toggle');
+            
+            if (isOnline) {
+                button.textContent = 'Go Offline';
+                button.classList.add('online');
+                startLocationUpdates();
+                showNotification('You are now online and available for rides', 'success');
+                
+                // Simulate ride offer after 5 seconds
+                setTimeout(() => {
+                    simulateRideOffer();
+                }, 5000);
+            } else {
+                button.textContent = 'Go Online';
+                button.classList.remove('online');
+                stopLocationUpdates();
+                showNotification('You are now offline', 'success');
+            }
+        }
+
+        // Start sending location updates
+        function startLocationUpdates() {
+            // Add driver marker
+            driverMarker = L.marker([currentPosition.lat, currentPosition.lng], {
+                icon: L.divIcon({
+                    html: '🚗',
+                    iconSize: [30, 30],
+                    className: 'marker-icon'
+                })
+            }).addTo(map).bindPopup('Your Location');
+
+            // Simulate location updates every 2 seconds
+            locationUpdateInterval = setInterval(() => {
+                // Randomly move driver slightly
+                currentPosition.lat += (Math.random() - 0.5) * 0.001;
+                currentPosition.lng += (Math.random() - 0.5) * 0.001;
+                
+                driverMarker.setLatLng([currentPosition.lat, currentPosition.lng]);
+                
+                // In production, send to API
+                // sendLocationUpdate();
+            }, 2000);
+        }
+
+        // Stop location updates
+        function stopLocationUpdates() {
+            if (locationUpdateInterval) {
+                clearInterval(locationUpdateInterval);
+            }
+            if (driverMarker) {
+                map.removeLayer(driverMarker);
+            }
+        }
+
+        // Simulate ride offer
+        function simulateRideOffer() {
+            if (!isOnline) return;
+
+            const offer = {
+                id: 'offer-' + Date.now(),
+                ride_id: 'ride-' + Date.now(),
+                pickup_latitude: currentPosition.lat + 0.02,
+                pickup_longitude: currentPosition.lng + 0.02,
+                pickup_address: 'Market St, San Francisco',
+                dropoff_latitude: currentPosition.lat + 0.05,
+                dropoff_longitude: currentPosition.lng + 0.05,
+                dropoff_address: 'Mission St, San Francisco',
+                estimated_fare: 18.50,
+                distance_to_pickup: 2.3,
+                eta_to_pickup: 5,
+                surge_multiplier: 1.2,
+                rider: {
+                    name: 'Jane Smith',
+                    rating: 4.9
+                }
+            };
+
+            displayRideOffer(offer);
+            showNotification('🔔 New ride request!', 'success');
+        }
+
+        // Display ride offer
+        function displayRideOffer(offer) {
+            const section = document.getElementById('ride-offers-section');
+            const container = document.getElementById('ride-offers');
+            
+            section.style.display = 'block';
+
+            const offerHTML = `
+                <div class="ride-offer" id="offer-${offer.id}">
+                    <h3>🔔 New Ride Request</h3>
+                    <div class="info-row">
+                        <span class="info-label">Pickup:</span>
+                        <span class="info-value">${offer.pickup_address}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Dropoff:</span>
+                        <span class="info-value">${offer.dropoff_address}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Estimated Fare:</span>
+                        <span class="info-value">$${offer.estimated_fare.toFixed(2)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Distance to Pickup:</span>
+                        <span class="info-value">${offer.distance_to_pickup} km (${offer.eta_to_pickup} min)</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Rider:</span>
+                        <span class="info-value">${offer.rider.name} ⭐ ${offer.rider.rating}</span>
+                    </div>
+                    ${offer.surge_multiplier > 1 ? `
+                        <div class="info-row">
+                            <span class="info-label">Surge:</span>
+                            <span class="info-value" style="color: #ff4757;">${offer.surge_multiplier}x</span>
+                        </div>
+                    ` : ''}
+                    <button class="btn btn-accept" onclick="acceptRide('${offer.id}', ${JSON.stringify(offer).replace(/"/g, '&quot;')})">
+                        Accept Ride - $${offer.estimated_fare.toFixed(2)}
+                    </button>
+                    <button class="btn btn-decline" onclick="declineRide('${offer.id}')">
+                        Decline
+                    </button>
+                </div>
+            `;
+
+            container.innerHTML = offerHTML;
+
+            // Show pickup marker
+            if (pickupMarker) map.removeLayer(pickupMarker);
+            pickupMarker = L.marker([offer.pickup_latitude, offer.pickup_longitude], {
+                icon: L.divIcon({
+                    html: '📍',
+                    iconSize: [30, 30],
+                    className: 'marker-icon'
+                })
+            }).addTo(map).bindPopup('Pickup Location');
+
+            // Auto-decline after 30 seconds
+            setTimeout(() => {
+                const offerElement = document.getElementById(`offer-${offer.id}`);
+                if (offerElement) {
+                    declineRide(offer.id);
+                }
+            }, 30000);
+        }
+
+        // Accept ride
+        function acceptRide(offerId, offer) {
+            const offerData = typeof offer === 'string' ? JSON.parse(offer.replace(/&quot;/g, '"')) : offer;
+            
+            document.getElementById('ride-offers-section').style.display = 'none';
+            
+            currentRide = {
+                ...offerData,
+                status: 'accepted'
+            };
+
+            displayActiveRide(currentRide);
+            showNotification('Ride accepted! Navigate to pickup location', 'success');
+
+            // Show route to pickup
+            updateMapForActiveRide(currentRide);
+        }
+
+        // Decline ride
+        function declineRide(offerId) {
+            document.getElementById('ride-offers-section').style.display = 'none';
+            if (pickupMarker) map.removeLayer(pickupMarker);
+            showNotification('Ride declined', 'success');
+        }
+
+        // Display active ride
+        function displayActiveRide(ride) {
+            const section = document.getElementById('active-ride-section');
+            const container = document.getElementById('active-ride');
+            
+            section.style.display = 'block';
+
+            let actionButtons = '';
+            if (ride.status === 'accepted') {
+                actionButtons = `
+                    <button class="btn btn-action" onclick="markArrived()">
+                        I've Arrived
+                    </button>
+                `;
+            } else if (ride.status === 'driver_arrived') {
+                actionButtons = `
+                    <button class="btn btn-action" onclick="startTrip()">
+                        Start Trip
+                    </button>
+                `;
+            } else if (ride.status === 'in_progress') {
+                actionButtons = `
+                    <button class="btn btn-action" onclick="completeTrip()">
+                        Complete Trip
+                    </button>
+                `;
+            }
+
+            container.innerHTML = `
+                <div class="active-ride">
+                    <span class="ride-status">${ride.status.toUpperCase().replace('_', ' ')}</span>
+                    <div class="info-row">
+                        <span class="info-label">Pickup:</span>
+                        <span class="info-value">${ride.pickup_address}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Dropoff:</span>
+                        <span class="info-value">${ride.dropoff_address}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Fare:</span>
+                        <span class="info-value">$${ride.estimated_fare.toFixed(2)}</span>
+                    </div>
+                    <div class="rider-info">
+                        <h4>👤 Rider</h4>
+                        <div class="info-row">
+                            <span class="info-label">Name:</span>
+                            <span class="info-value">${ride.rider.name}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Rating:</span>
+                            <span class="info-value">⭐ ${ride.rider.rating}</span>
+                        </div>
+                    </div>
+                    ${actionButtons}
+                </div>
+            `;
+        }
+
+        // Update map for active ride
+        function updateMapForActiveRide(ride) {
+            // Clear existing markers
+            if (pickupMarker) map.removeLayer(pickupMarker);
+            if (dropoffMarker) map.removeLayer(dropoffMarker);
+
+            // Add markers
+            pickupMarker = L.marker([ride.pickup_latitude, ride.pickup_longitude], {
+                icon: L.divIcon({
+                    html: '📍',
+                    iconSize: [30, 30],
+                    className: 'marker-icon'
+                })
+            }).addTo(map).bindPopup('Pickup');
+
+            dropoffMarker = L.marker([ride.dropoff_latitude, ride.dropoff_longitude], {
+                icon: L.divIcon({
+                    html: '🎯',
+                    iconSize: [30, 30],
+                    className: 'marker-icon'
+                })
+            }).addTo(map).bindPopup('Dropoff');
+
+            // Fit bounds
+            const bounds = L.latLngBounds([
+                [ride.pickup_latitude, ride.pickup_longitude],
+                [ride.dropoff_latitude, ride.dropoff_longitude],
+                [currentPosition.lat, currentPosition.lng]
+            ]);
+            map.fitBounds(bounds, { padding: [50, 50] });
+        }
+
+        // Mark arrived
+        function markArrived() {
+            currentRide.status = 'driver_arrived';
+            displayActiveRide(currentRide);
+            showNotification('Marked as arrived. Waiting for rider...', 'success');
+        }
+
+        // Start trip
+        function startTrip() {
+            currentRide.status = 'in_progress';
+            displayActiveRide(currentRide);
+            showNotification('Trip started! Navigate to destination', 'success');
+        }
+
+        // Complete trip
+        function completeTrip() {
+            const earnings = currentRide.estimated_fare * 0.8; // Driver gets 80%
+            todayEarnings += earnings;
+            tripsToday += 1;
+
+            document.getElementById('today-earnings').textContent = todayEarnings.toFixed(2);
+            document.getElementById('trips-today').textContent = tripsToday;
+
+            showNotification(`Trip completed! You earned $${earnings.toFixed(2)}`, 'success');
+            
+            document.getElementById('active-ride-section').style.display = 'none';
+            if (pickupMarker) map.removeLayer(pickupMarker);
+            if (dropoffMarker) map.removeLayer(dropoffMarker);
+            
+            currentRide = null;
+
+            // Simulate next ride offer after 10 seconds
+            if (isOnline) {
+                setTimeout(() => simulateRideOffer(), 10000);
+            }
+        }
+
+        // Initialize
+        map.on('click', function(e) {
+            currentPosition = { lat: e.latlng.lat, lng: e.latlng.lng };
+            if (driverMarker) {
+                driverMarker.setLatLng([currentPosition.lat, currentPosition.lng]);
+            }
+        });
+    </script>
+</body>
+</html>
+

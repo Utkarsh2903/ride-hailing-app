@@ -1,0 +1,12 @@
+[phases.setup]
+nixPkgs = ['...', 'postgresql', 'geos', 'proj']
+
+[phases.install]
+cmds = ['bundle install']
+
+[phases.build]
+cmds = ['bundle exec rails assets:precompile']
+
+[start]
+cmd = 'bundle exec rails server -b 0.0.0.0 -p ${PORT:-3000}'
+

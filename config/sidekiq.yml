@@ -1,0 +1,25 @@
+---
+:concurrency: 5
+:timeout: 25
+
+# Set to higher value to retry more
+:max_retries: 3
+
+:queues:
+  - critical
+  - high
+  - default
+  - low
+
+# Production settings
+production:
+  :concurrency: 10
+  
+# Development settings
+development:
+  :concurrency: 5
+
+# Test settings
+test:
+  :concurrency: 1
+

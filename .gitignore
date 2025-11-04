@@ -1,0 +1,72 @@
+# See https://help.github.com/articles/ignoring-files for more about ignoring files.
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Dependencies
+/node_modules
+/vendor/bundle
+
+# Ignore bundler config
+/.bundle
+
+# Ignore all logfiles and tempfiles
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+
+# Ignore pidfiles, but keep the directory
+/tmp/pids/*
+!/tmp/pids/.keep
+
+# Ignore uploaded files in development
+/public/uploads
+
+# Ignore master key for decrypting credentials
+/config/master.key
+
+# Ignore Redis dump
+dump.rdb
+
+# Ignore database files
+*.sqlite3
+*.sqlite3-*
+
+# Ignore coverage reports
+/coverage
+
+# Ignore test files
+/spec/tmp
+/spec/examples.txt
+
+# MacOS
+.DS_Store
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Compiled assets
+/public/assets
+/public/packs
+/public/packs-test
+
+# Yarn
+/yarn-error.log
+yarn-debug.log*
+.yarn-integrity
+
+# Docker
+.dockerignore
+
+# Rails cache
+tmp/cache/
+
+# Credentials
+credentials.yml.enc
