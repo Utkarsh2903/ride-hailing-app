@@ -1,7 +1,6 @@
 module Webhooks
   class PaypalController < ApplicationController
-    # Skip CSRF and authentication for webhooks
-    skip_before_action :verify_authenticity_token
+    # Skip authentication for webhooks (CSRF not needed in API-only mode)
     skip_before_action :authenticate_user!, if: :defined_method?
     
     # POST /webhooks/paypal
