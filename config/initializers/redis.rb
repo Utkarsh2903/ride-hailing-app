@@ -16,12 +16,8 @@ Rails.application.config.cache_store = :redis_cache_store, {
   }
 }
 
-# Configure Redis for ActionCable
-Rails.application.config.action_cable.cable = {
-  adapter: 'redis',
-  url: REDIS_URL,
-  channel_prefix: 'ride_hailing_cable_production'
-}
+# ActionCable disabled for API-only app
+# Rails.application.config.action_cable.cable = { ... }
 
 # Global Redis connection for custom operations
 $redis = Redis.new(
