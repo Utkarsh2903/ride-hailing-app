@@ -39,9 +39,7 @@ gem "rgeo", "~> 3.0"
 gem "rgeo-geojson", "~> 2.1"
 gem "activerecord-postgis-adapter", "~> 9.0"
 
-# API Documentation
-gem "rswag-api"
-gem "rswag-ui"
+# API Documentation removed
 
 # Validations
 gem "validates_timeliness", "~> 7.0.0.beta2"

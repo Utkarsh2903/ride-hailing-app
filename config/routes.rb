@@ -1,8 +1,4 @@
 Rails.application.routes.draw do
-  # Swagger API Documentation
-  mount Rswag::Ui::Engine => '/api-docs'
-  mount Rswag::Api::Engine => '/api-docs'
-
   # Health check endpoint
   get "up" => "rails/health#show", as: :rails_health_check
   get "health" => "rails/health#show"
