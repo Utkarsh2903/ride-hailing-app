@@ -1,0 +1,3 @@
+# Force production environment for all Rails commands
+--environment=production
+

@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Setup script for production-only environment
+
+set -e
+
+echo "🚀 Setting up production environment..."
+
+# Create .env file if it doesn't exist
+if [ ! -f .env ]; then
+  echo "📝 Creating .env file..."
+  cat > .env << 'EOF'
+RAILS_ENV=production
+RACK_ENV=production
+DATABASE_URL=postgresql://localhost/ride_hailing_production
+REDIS_URL=redis://localhost:6379/0
+RAILS_SERVE_STATIC_FILES=true
+RAILS_LOG_TO_STDOUT=true
+PORT=8080
+EOF
+  
+  # Generate SECRET_KEY_BASE
+  SECRET_KEY=$(bundle exec rails secret)
+  echo "SECRET_KEY_BASE=$SECRET_KEY" >> .env
+  echo "✅ .env file created"
+else
+  echo "⚠️  .env file already exists, skipping..."
+fi
+
+# Export environment variables
+export RAILS_ENV=production
+export RACK_ENV=production
+
+echo "📦 Installing dependencies..."
+bundle install --without development test
+
+echo "🗄️  Setting up database..."
+bundle exec rails db:create
+bundle exec rails db:migrate
+
+echo "🧹 Precompiling assets (if needed)..."
+bundle exec rails assets:precompile || echo "⚠️  No assets to precompile (API-only)"
+
+echo ""
+echo "✅ Production setup complete!"
+echo ""
+echo "🔑 Important: Update .env with your actual credentials"
+echo "🚀 To start the server: bin/rails server"
+echo "👷 To start worker: bundle exec sidekiq -C config/sidekiq.yml"
+
