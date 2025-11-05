@@ -1,230 +1,107 @@
-# Ride Hailing Platform
+# Ride Hailing App
 
-A scalable, multi-tenant, multi-region ride-hailing platform built with Ruby on Rails.
+A multi-tenant ride-hailing platform built with Ruby on Rails 7.1.3.
 
-## 🚀 Features
+## Tech Stack
 
-- **Multi-Tenancy**: Isolate data by tenant for different markets/regions
-- **Multi-Region**: Deploy across multiple geographic regions
-- **Real-time Location Tracking**: Driver locations updated 1-2 times/second
-- **Driver-Rider Matching**: Sub-second matching with intelligent ranking
-- **Trip Management**: Complete lifecycle from request to completion
-- **Payments**: Integration with external payment service providers
-- **Notifications**: Multi-channel (WebSocket, Push, SMS, Email)
-- **Surge Pricing**: Dynamic pricing based on supply/demand
-- **State Machines**: Clean state transitions for rides, trips, and payments
+- **Ruby** 3.4.7
+- **Rails** 7.1.3 (API-only)
+- **PostgreSQL** with PostGIS
+- **Redis** (caching, geospatial, Sidekiq)
+- **Sidekiq** (background jobs)
 
-## 📋 Requirements
+## Features
 
-- Ruby 3.2+
-- Rails 7.1.3
-- PostgreSQL 14+ with PostGIS extension
-- Redis 7+
-- Sidekiq 7+
+- Multi-tenant architecture
+- Real-time driver location tracking (Redis geospatial)
+- Driver-rider matching (<1s p95)
+- Trip lifecycle management
+- Payment processing (stubbed, ready for PSP integration)
+- Notifications (multi-channel)
+- JWT authentication
+- Pundit authorization
 
-## 🛠️ Installation
+## Railway Deployment
 
-### 1. Clone Repository
+Already deployed! Your app is live at: `https://your-app.railway.app`
+
+### One-Time Setup
+
+Run these in Railway Dashboard (via "Run Command" or Shell):
 
 ```bash
-git clone <repository-url>
-cd ride-hailing-app
+# Enable PostGIS
+rails runner "ActiveRecord::Base.connection.execute('CREATE EXTENSION IF NOT EXISTS postgis')"
+
+# Create test tenant and user
+rails runner "
+  tenant = Tenant.find_or_create_by!(subdomain: 'test') do |t|
+    t.name = 'Test Company'
+    t.status = 'active'
+  end
+  
+  User.find_or_create_by!(email: 'admin@test.com') do |u|
+    u.tenant = tenant
+    u.password = 'password123'
+    u.role = 'super_admin'
+    u.status = 'active'
+  end
+"
 ```
 
-### 2. Install Dependencies
+### Environment Variables (Railway)
+
+Set these in Railway Dashboard → Variables:
+
+```
+RAILS_MASTER_KEY=<from config/master.key>
+SECRET_KEY_BASE=<generate with: openssl rand -hex 64>
+RAILS_ENV=production
+RAILS_SERVE_STATIC_FILES=true
+DATABASE_URL=<auto-set by PostgreSQL service>
+REDIS_URL=<auto-set by Redis service>
+```
+
+## API Documentation
+
+- Swagger UI: `https://your-app.railway.app/api-docs`
+- Health Check: `https://your-app.railway.app/health`
+
+## Core Endpoints
+
+```
+POST   /api/v1/auth/register
+POST   /api/v1/auth/login
+POST   /api/v1/rides
+GET    /api/v1/rides/:id
+POST   /api/v1/drivers/:id/location
+POST   /api/v1/drivers/:id/accept
+POST   /api/v1/trips/:id/end
+POST   /api/v1/payments
+```
+
+## Local Development
 
 ```bash
+# Install dependencies
 bundle install
-```
 
-### 3. Setup Database
+# Setup database
+rails db:create db:migrate
 
-```bash
-# Create databases
-rails db:create
-
-# Run migrations
-rails db:migrate
-
-# Seed initial data (optional)
-rails db:seed
-```
-
-### 4. Configure Environment
-
-```bash
-# Copy example environment file
-cp .env.example .env
-
-# Edit .env with your credentials
-```
-
-Required environment variables:
-```
-DATABASE_URL=postgresql://localhost/ridehailing_development
-REDIS_URL=redis://localhost:6379/0
-SECRET_KEY_BASE=<generate with: rails secret>
-```
-
-### 5. Start Services
-
-```bash
-# Terminal 1: Rails server
+# Start server
 rails server
 
-# Terminal 2: Sidekiq (background jobs)
+# Start Sidekiq (separate terminal)
 bundle exec sidekiq
-
-# Terminal 3: Redis (if not running as service)
-redis-server
 ```
 
-## 📖 API Documentation
-
-See [API_REFERENCE.md](API_REFERENCE.md) for complete API documentation.
-
-### Quick Start
+## Testing
 
 ```bash
-# Register a rider
-POST /api/v1/auth/register
-{
-  "user": {
-    "email": "rider@example.com",
-    "password": "password",
-    "role": "rider"
-  }
-}
-
-# Create a ride
-POST /api/v1/rides
-Headers: Authorization: Bearer <jwt_token>
-{
-  "ride": {
-    "pickup_latitude": 37.7749,
-    "pickup_longitude": -122.4194,
-    "dropoff_latitude": 37.7849,
-    "dropoff_longitude": -122.4094,
-    "tier": "standard"
-  }
-}
+rspec
 ```
 
-## 🏗️ Architecture
+## License
 
-### Application Layers
-
-```
-Controllers (API endpoints, strong parameters)
-    ↓
-Services (Complex business logic)
-    ↓
-Models (Data validation, associations, scopes)
-    ↓
-Database (PostgreSQL + PostGIS)
-```
-
-### Key Components
-
-- **Models**: User, Driver, Rider, Ride, Trip, Payment
-- **Services**: RideCreation, DriverMatching, FareCalculation, Notifications
-- **Jobs**: Background processing for matching, payments, location persistence
-- **Channels**: WebSocket connections for real-time updates
-
-## 🎯 Scalability
-
-The system is designed to handle:
-- 100,000+ concurrent drivers
-- 10,000 ride requests/minute
-- 200,000 location updates/second
-
-See [SCALABILITY_ARCHITECTURE.md](SCALABILITY_ARCHITECTURE.md) for details.
-
-### Key Scale Features
-
-- **Stateless API servers**: Horizontal scaling
-- **Redis cluster**: Sharded for high throughput
-- **PostgreSQL replicas**: Read/write separation
-- **Multi-region deployment**: Region-local writes
-- **Efficient caching**: Redis for hot data
-
-## 🧪 Testing
-
-```bash
-# Run all tests
-bundle exec rspec
-
-# Run specific test file
-bundle exec rspec spec/models/ride_spec.rb
-
-# Run with coverage
-COVERAGE=true bundle exec rspec
-```
-
-## 🔒 Security
-
-- JWT-based authentication
-- Role-based authorization (Pundit)
-- Tenant isolation
-- Strong parameters
-- SQL injection protection (ActiveRecord)
-- XSS protection
-- CORS configuration
-
-## 📊 Monitoring
-
-- **New Relic**: Application performance monitoring
-- **Sidekiq Web**: Background job monitoring
-- **Rails logs**: Structured logging
-- **Redis**: Metrics and health checks
-
-## 🚀 Deployment
-
-### Docker
-
-```bash
-# Build image
-docker build -t ridehailing-app .
-
-# Run container
-docker run -p 3000:3000 ridehailing-app
-```
-
-### Kubernetes
-
-```bash
-# Apply configurations
-kubectl apply -f k8s/
-
-# Scale API servers
-kubectl scale deployment ridehailing-api --replicas=20
-```
-
-## 📚 Additional Documentation
-
-- [RAILS_BEST_PRACTICES.md](RAILS_BEST_PRACTICES.md) - Rails conventions used
-- [SCALABILITY_ARCHITECTURE.md](SCALABILITY_ARCHITECTURE.md) - Scale architecture
-- [MULTI_REGION_ARCHITECTURE.md](MULTI_REGION_ARCHITECTURE.md) - Multi-region setup
-- [SIMPLIFICATION_SUMMARY.md](SIMPLIFICATION_SUMMARY.md) - Code simplification details
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License.
-
-## 🆘 Support
-
-For questions or issues:
-- Open an issue on GitHub
-- Contact: support@ridehailing.com
-
----
-
-Built with ❤️ using Ruby on Rails
+Proprietary
