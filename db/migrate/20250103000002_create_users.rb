@@ -12,11 +12,11 @@ class CreateUsers < ActiveRecord::Migration[7.1]
       
       t.timestamps
       
-      t.index :email, unique: true
-      t.index :phone, unique: true
-      t.index :role
-      t.index :status
-      t.index :created_at
+      t.index :email, unique: true, name: "idx_users_email_unique"
+      t.index :phone, unique: true, name: "idx_users_phone_unique"
+      t.index :role, name: "idx_users_role"
+      t.index :status, name: "idx_users_status"
+      t.index :created_at, name: "idx_users_created_at"
     end
   end
 end

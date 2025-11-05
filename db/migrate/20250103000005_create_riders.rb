@@ -12,8 +12,8 @@ class CreateRiders < ActiveRecord::Migration[7.1]
       
       t.timestamps
       
-      t.index :rating
-      t.index :created_at
+      t.index :rating, name: "idx_riders_rating"
+      t.index :created_at, name: "idx_riders_created_at"
     end
   end
 end
