@@ -10,11 +10,11 @@ class CreateRatings < ActiveRecord::Migration[7.1]
       
       t.timestamps
       
-      t.index :ride_id, unique: true
-      t.index [:rater_type, :rater_id]
-      t.index [:rated_type, :rated_id]
-      t.index :score
-      t.index :created_at
+      t.index :ride_id, unique: true, name: "idx_ratings_ride_unique"
+      t.index [:rater_type, :rater_id], name: "idx_ratings_rater"
+      t.index [:rated_type, :rated_id], name: "idx_ratings_rated"
+      t.index :score, name: "idx_ratings_score"
+      t.index :created_at, name: "idx_ratings_created_at"
     end
     
     add_check_constraint :ratings, "score >= 1 AND score <= 5", name: "valid_score"

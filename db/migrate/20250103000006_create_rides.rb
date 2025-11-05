@@ -43,17 +43,17 @@ class CreateRides < ActiveRecord::Migration[7.1]
       
       t.timestamps
       
-      t.index :rider_id
-      t.index :driver_id
-      t.index :status
-      t.index :tier
-      t.index :requested_at
-      t.index :idempotency_key, unique: true
-      t.index [:pickup_latitude, :pickup_longitude]
-      t.index [:dropoff_latitude, :dropoff_longitude]
-      t.index [:status, :requested_at]
-      t.index [:rider_id, :created_at], order: { created_at: :desc }
-      t.index [:driver_id, :created_at], order: { created_at: :desc }
+      t.index :rider_id, name: "idx_rides_rider_id"
+      t.index :driver_id, name: "idx_rides_driver_id"
+      t.index :status, name: "idx_rides_status"
+      t.index :tier, name: "idx_rides_tier"
+      t.index :requested_at, name: "idx_rides_requested_at"
+      t.index :idempotency_key, unique: true, name: "idx_rides_idempotency_key"
+      t.index [:pickup_latitude, :pickup_longitude], name: "idx_rides_pickup_coords"
+      t.index [:dropoff_latitude, :dropoff_longitude], name: "idx_rides_dropoff_coords"
+      t.index [:status, :requested_at], name: "idx_rides_status_requested"
+      t.index [:rider_id, :created_at], order: { created_at: :desc }, name: "idx_rides_rider_created"
+      t.index [:driver_id, :created_at], order: { created_at: :desc }, name: "idx_rides_driver_created"
     end
   end
 end

@@ -33,11 +33,11 @@ class CreateTrips < ActiveRecord::Migration[7.1]
       
       t.timestamps
       
-      t.index :ride_id, unique: true
-      t.index :status
-      t.index :started_at
-      t.index :ended_at
-      t.index [:status, :started_at]
+      t.index :ride_id, unique: true, name: 'idx_trips_ride_unique'
+      t.index :status, name: 'idx_trips_on_status'
+      t.index :started_at, name: 'idx_trips_on_started_at'
+      t.index :ended_at, name: 'idx_trips_on_ended_at'
+      t.index [:status, :started_at], name: 'idx_trips_status_started'
     end
   end
 end

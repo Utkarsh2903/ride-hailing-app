@@ -35,14 +35,14 @@ class CreatePayments < ActiveRecord::Migration[7.1]
       
       t.timestamps
       
-      t.index :ride_id
-      t.index :rider_id
-      t.index :driver_id
-      t.index :status
-      t.index :transaction_id, unique: true, where: "transaction_id IS NOT NULL"
-      t.index :idempotency_key, unique: true
-      t.index :created_at
-      t.index [:status, :created_at]
+      t.index :ride_id, name: "idx_payments_ride_id"
+      t.index :rider_id, name: "idx_payments_rider_id"
+      t.index :driver_id, name: "idx_payments_driver_id"
+      t.index :status, name: "idx_payments_status"
+      t.index :transaction_id, unique: true, where: "transaction_id IS NOT NULL", name: "idx_payments_transaction_id"
+      t.index :idempotency_key, unique: true, name: "idx_payments_idempotency_key"
+      t.index :created_at, name: "idx_payments_created_at"
+      t.index [:status, :created_at], name: "idx_payments_status_created"
     end
   end
 end
