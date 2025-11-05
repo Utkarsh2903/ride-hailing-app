@@ -1,29 +1,1389 @@
----
 openapi: 3.0.1
 info:
   title: Ride Hailing API
   version: v1
-  description: Multi-tenant ride-hailing platform API with real-time driver tracking,
-    dynamic pricing, and payment integration.
-paths: {}
+  description: |
+    Multi-tenant, multi-region ride-hailing platform API with real-time driver tracking, 
+    dynamic pricing, and payment integration. Similar to Uber/Ola.
+    
+    ## Authentication
+    Most endpoints require JWT authentication. Include the token in the Authorization header:
+    ```
+    Authorization: Bearer YOUR_JWT_TOKEN
+    ```
+    
+    ## Multi-tenancy
+    All requests must include the tenant identifier:
+    ```
+    X-Tenant-ID: test
+    ```
+    
 servers:
-- url: https://{defaultHost}
-  variables:
-    defaultHost:
-      default: ride-hailing-app-production-88b3.up.railway.app
+  - url: https://ride-hailing-app-production-88b3.up.railway.app
+    description: Production server
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User authentication and registration
+  - name: Rides
+    description: Ride request and management
+  - name: Drivers
+    description: Driver operations and location updates
+  - name: Trips
+    description: Trip management and completion
+  - name: Payments
+    description: Payment processing and refunds
+  - name: Tenants
+    description: Tenant management (admin only)
+
+paths:
+  /api/v1/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      description: Create a new user account (rider or driver)
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - phone
+                - password
+                - password_confirmation
+                - name
+                - role
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: rider@example.com
+                phone:
+                  type: string
+                  example: '+1234567890'
+                password:
+                  type: string
+                  format: password
+                  minLength: 6
+                  example: password123
+                password_confirmation:
+                  type: string
+                  format: password
+                  example: password123
+                name:
+                  type: string
+                  example: John Doe
+                role:
+                  type: string
+                  enum: [rider, driver]
+                  example: rider
+                driver_attributes:
+                  type: object
+                  description: Required if role is 'driver'
+                  properties:
+                    license_number:
+                      type: string
+                      example: DL12345678
+                    vehicle_type:
+                      type: string
+                      enum: [sedan, suv, economy, premium, luxury]
+                      example: sedan
+                    vehicle_model:
+                      type: string
+                      example: Toyota Camry 2020
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+                    description: JWT authentication token
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Authenticate with email and password to receive JWT token
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@test.com
+                password:
+                  type: string
+                  format: password
+                  example: password123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT authentication token
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user
+      description: Retrieve details of the currently authenticated user
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+      responses:
+        '200':
+          description: User details retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: Logout current user (JWT is stateless, token remains valid until expiry)
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out successfully
+
+  /api/v1/rides:
+    post:
+      tags:
+        - Rides
+      summary: Create ride request
+      description: |
+        Request a new ride with pickup and dropoff locations.
+        The system will find nearby drivers and send offers.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pickup_latitude
+                - pickup_longitude
+                - dropoff_latitude
+                - dropoff_longitude
+                - tier
+                - payment_method
+              properties:
+                pickup_latitude:
+                  type: number
+                  format: double
+                  example: 37.7749
+                pickup_longitude:
+                  type: number
+                  format: double
+                  example: -122.4194
+                pickup_address:
+                  type: string
+                  example: 123 Market St, San Francisco, CA
+                dropoff_latitude:
+                  type: number
+                  format: double
+                  example: 37.8044
+                dropoff_longitude:
+                  type: number
+                  format: double
+                  example: -122.2712
+                dropoff_address:
+                  type: string
+                  example: 456 Broadway, Oakland, CA
+                tier:
+                  type: string
+                  enum: [economy, standard, premium, suv, luxury]
+                  example: standard
+                payment_method:
+                  type: string
+                  enum: [card, cash, wallet]
+                  example: card
+      responses:
+        '201':
+          description: Ride created and matching started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ride:
+                    $ref: '#/components/schemas/Ride'
+                  message:
+                    type: string
+                    example: Finding drivers nearby...
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    get:
+      tags:
+        - Rides
+      summary: List rides
+      description: Get list of rides for current user
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [requested, accepted, driver_enroute, arrived, started, completed, cancelled]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Rides retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rides:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Ride'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /api/v1/rides/{id}:
+    get:
+      tags:
+        - Rides
+      summary: Get ride details
+      description: Retrieve details of a specific ride
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Ride details retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ride:
+                    $ref: '#/components/schemas/Ride'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/rides/{id}/cancel:
+    post:
+      tags:
+        - Rides
+      summary: Cancel ride
+      description: Cancel a ride request or ongoing ride
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: Changed plans
+      responses:
+        '200':
+          description: Ride cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ride:
+                    $ref: '#/components/schemas/Ride'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/rides/{id}/track:
+    get:
+      tags:
+        - Rides
+      summary: Track ride
+      description: Get real-time location and status of ongoing ride
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Ride tracking data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ride:
+                    $ref: '#/components/schemas/Ride'
+                  driver_location:
+                    type: object
+                    properties:
+                      latitude:
+                        type: number
+                      longitude:
+                        type: number
+                      bearing:
+                        type: number
+                      updated_at:
+                        type: string
+                        format: date-time
+
+  /api/v1/drivers/{id}/location:
+    post:
+      tags:
+        - Drivers
+      summary: Update driver location
+      description: |
+        Send real-time location update (GPS coordinates).
+        Should be called every 1-2 seconds while driver is online.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - latitude
+                - longitude
+              properties:
+                latitude:
+                  type: number
+                  format: double
+                  example: 37.7749
+                longitude:
+                  type: number
+                  format: double
+                  example: -122.4194
+                bearing:
+                  type: number
+                  format: double
+                  example: 45.5
+                  description: Direction in degrees (0-360)
+                speed:
+                  type: number
+                  format: double
+                  example: 25.5
+                  description: Speed in km/h
+                accuracy:
+                  type: number
+                  format: double
+                  example: 10.0
+                  description: GPS accuracy in meters
+      responses:
+        '200':
+          description: Location updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Location updated
+                  nearby_requests:
+                    type: integer
+                    example: 3
+
+  /api/v1/drivers/{id}/location/batch:
+    post:
+      tags:
+        - Drivers
+      summary: Batch update driver location
+      description: Send multiple location updates at once (for offline sync)
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                locations:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      latitude:
+                        type: number
+                      longitude:
+                        type: number
+                      bearing:
+                        type: number
+                      speed:
+                        type: number
+                      recorded_at:
+                        type: string
+                        format: date-time
+      responses:
+        '200':
+          description: Locations updated
+
+  /api/v1/drivers/{id}/accept:
+    post:
+      tags:
+        - Drivers
+      summary: Accept ride offer
+      description: Driver accepts a ride assignment
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ride_id
+              properties:
+                ride_id:
+                  type: string
+                  format: uuid
+                estimated_arrival:
+                  type: integer
+                  description: ETA in minutes
+                  example: 5
+      responses:
+        '200':
+          description: Ride accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ride:
+                    $ref: '#/components/schemas/Ride'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/drivers/{id}/decline:
+    post:
+      tags:
+        - Drivers
+      summary: Decline ride offer
+      description: Driver declines a ride assignment
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ride_id
+              properties:
+                ride_id:
+                  type: string
+                  format: uuid
+                reason:
+                  type: string
+                  example: Too far
+      responses:
+        '200':
+          description: Ride declined
+
+  /api/v1/drivers/{id}/arrive:
+    post:
+      tags:
+        - Drivers
+      summary: Mark arrived at pickup
+      description: Driver marks arrival at pickup location
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ride_id
+              properties:
+                ride_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Arrival marked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ride:
+                    $ref: '#/components/schemas/Ride'
+
+  /api/v1/drivers/{id}/start_trip:
+    post:
+      tags:
+        - Drivers
+      summary: Start trip
+      description: Start the trip when rider is onboard
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ride_id
+              properties:
+                ride_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Trip started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trip:
+                    $ref: '#/components/schemas/Trip'
+
+  /api/v1/drivers/{id}/online:
+    post:
+      tags:
+        - Drivers
+      summary: Go online
+      description: Mark driver as available to receive ride requests
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Driver is now online
+
+  /api/v1/drivers/{id}/offline:
+    post:
+      tags:
+        - Drivers
+      summary: Go offline
+      description: Mark driver as unavailable
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Driver is now offline
+
+  /api/v1/drivers/{id}/earnings:
+    get:
+      tags:
+        - Drivers
+      summary: Get driver earnings
+      description: Retrieve earnings summary for driver
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Earnings retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_earnings:
+                    type: number
+                  trip_count:
+                    type: integer
+                  trips:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Trip'
+
+  /api/v1/trips/{id}:
+    get:
+      tags:
+        - Trips
+      summary: Get trip details
+      description: Retrieve details of a specific trip
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Trip details retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trip:
+                    $ref: '#/components/schemas/Trip'
+
+  /api/v1/trips/{id}/end:
+    post:
+      tags:
+        - Trips
+      summary: End trip
+      description: |
+        Complete the trip at dropoff location.
+        This triggers fare calculation and payment processing.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actual_distance:
+                  type: number
+                  description: Trip distance in km
+                  example: 5.2
+                actual_duration:
+                  type: integer
+                  description: Trip duration in minutes
+                  example: 15
+      responses:
+        '200':
+          description: Trip ended and fare calculated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trip:
+                    $ref: '#/components/schemas/Trip'
+                  payment:
+                    $ref: '#/components/schemas/Payment'
+
+  /api/v1/payments:
+    post:
+      tags:
+        - Payments
+      summary: Create payment
+      description: Initiate payment for a ride
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ride_id
+                - payment_method
+              properties:
+                ride_id:
+                  type: string
+                  format: uuid
+                payment_method:
+                  type: string
+                  enum: [card, cash, wallet]
+                  example: card
+      responses:
+        '201':
+          description: Payment initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payment:
+                    $ref: '#/components/schemas/Payment'
+
+    get:
+      tags:
+        - Payments
+      summary: List payments
+      description: Get payment history
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+      responses:
+        '200':
+          description: Payments retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Payment'
+
+  /api/v1/payments/{id}:
+    get:
+      tags:
+        - Payments
+      summary: Get payment details
+      description: Retrieve details of a specific payment
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Payment details retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payment:
+                    $ref: '#/components/schemas/Payment'
+
+  /api/v1/payments/{id}/retry:
+    post:
+      tags:
+        - Payments
+      summary: Retry failed payment
+      description: Retry a failed payment transaction
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Payment retry initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payment:
+                    $ref: '#/components/schemas/Payment'
+
+  /api/v1/payments/{id}/refund:
+    post:
+      tags:
+        - Payments
+      summary: Refund payment
+      description: Issue a refund for a completed payment
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: Customer complaint
+                amount:
+                  type: number
+                  description: Partial refund amount (optional, defaults to full)
+      responses:
+        '200':
+          description: Refund issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payment:
+                    $ref: '#/components/schemas/Payment'
+
+  /api/v1/tenants:
+    get:
+      tags:
+        - Tenants
+      summary: List tenants
+      description: Get all tenants (super admin only)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tenants retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tenant'
+
+    post:
+      tags:
+        - Tenants
+      summary: Create tenant
+      description: Create a new tenant (super admin only)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - slug
+                - name
+              properties:
+                slug:
+                  type: string
+                  example: acme-corp
+                name:
+                  type: string
+                  example: Acme Corporation
+                subdomain:
+                  type: string
+                  example: acme
+                country_code:
+                  type: string
+                  example: US
+      responses:
+        '201':
+          description: Tenant created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenant:
+                    $ref: '#/components/schemas/Tenant'
+
+  /api/v1/tenants/{id}:
+    get:
+      tags:
+        - Tenants
+      summary: Get tenant details
+      description: Retrieve tenant information
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Tenant retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenant:
+                    $ref: '#/components/schemas/Tenant'
+
+    put:
+      tags:
+        - Tenants
+      summary: Update tenant
+      description: Update tenant information (super admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                status:
+                  type: string
+                  enum: [active, inactive, suspended]
+      responses:
+        '200':
+          description: Tenant updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenant:
+                    $ref: '#/components/schemas/Tenant'
+
+    delete:
+      tags:
+        - Tenants
+      summary: Delete tenant
+      description: Delete a tenant (super admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Tenant deleted
+
+  /api/v1/tenants/{id}/stats:
+    get:
+      tags:
+        - Tenants
+      summary: Get tenant statistics
+      description: Retrieve usage statistics for a tenant
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Statistics retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  active_drivers:
+                    type: integer
+                  total_riders:
+                    type: integer
+                  rides_today:
+                    type: integer
+                  revenue_today:
+                    type: number
+
 components:
   securitySchemes:
-    Bearer:
+    BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token for authentication. Obtain from /api/v1/auth/login
+      description: |
+        JWT token obtained from /api/v1/auth/login
+        
+        Example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+  parameters:
     TenantID:
-      type: apiKey
-      in: header
       name: X-Tenant-ID
-      description: Tenant identifier (e.g., "test")
+      in: header
+      required: true
+      schema:
+        type: string
+        example: test
+      description: Tenant identifier for multi-tenancy
+
+    IdempotencyKey:
+      name: X-Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: Unique key to prevent duplicate requests
+
   schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [rider, driver, admin, super_admin]
+        status:
+          type: string
+          enum: [active, inactive, suspended]
+        created_at:
+          type: string
+          format: date-time
+
+    Ride:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        rider_id:
+          type: string
+          format: uuid
+        driver_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [requested, accepted, driver_enroute, arrived, started, completed, cancelled, timed_out]
+        tier:
+          type: string
+          enum: [economy, standard, premium, suv, luxury]
+        pickup_latitude:
+          type: number
+        pickup_longitude:
+          type: number
+        pickup_address:
+          type: string
+        dropoff_latitude:
+          type: number
+        dropoff_longitude:
+          type: number
+        dropoff_address:
+          type: string
+        estimated_fare:
+          type: number
+        surge_multiplier:
+          type: number
+        payment_method:
+          type: string
+          enum: [card, cash, wallet]
+        payment_status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        requested_at:
+          type: string
+          format: date-time
+        accepted_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+
+    Trip:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ride_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, in_progress, completed, cancelled]
+        started_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: string
+          format: date-time
+        actual_distance:
+          type: number
+          description: Distance in kilometers
+        actual_duration:
+          type: integer
+          description: Duration in minutes
+        base_fare:
+          type: number
+        distance_fare:
+          type: number
+        time_fare:
+          type: number
+        surge_amount:
+          type: number
+        total_fare:
+          type: number
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ride_id:
+          type: string
+          format: uuid
+        rider_id:
+          type: string
+          format: uuid
+        driver_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, processing, completed, failed, refunded]
+        payment_method:
+          type: string
+          enum: [card, cash, wallet]
+        amount:
+          type: number
+        driver_amount:
+          type: number
+          description: Driver's share after platform fee
+        platform_fee:
+          type: number
+        transaction_id:
+          type: string
+        completed_at:
+          type: string
+          format: date-time
+
+    Tenant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        subdomain:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive, suspended]
+        region:
+          type: string
+        country_code:
+          type: string
+        timezone:
+          type: string
+        currency:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        total_pages:
+          type: integer
+        total_count:
+          type: integer
+        per_page:
+          type: integer
+
     Error:
       type: object
       properties:
@@ -34,3 +1394,36 @@ components:
         status:
           type: integer
 
+  responses:
+    Unauthorized:
+      description: Authentication required or token invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Unauthorized
+            message: Invalid or missing authentication token
+            status: 401
+
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Validation Failed
+            message: Email is required
+            status: 422
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Not Found
+            message: Ride not found
+            status: 404
