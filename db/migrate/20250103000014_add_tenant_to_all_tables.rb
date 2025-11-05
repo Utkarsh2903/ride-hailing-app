@@ -9,9 +9,7 @@ class AddTenantToAllTables < ActiveRecord::Migration[7.1]
       :trips,
       :payments,
       :driver_locations,
-      :surge_zones,
       :driver_assignments,
-      :ratings,
       :notifications
     ]
 
@@ -42,8 +40,6 @@ class AddTenantToAllTables < ActiveRecord::Migration[7.1]
 
     add_index :driver_locations, [:tenant_id, :driver_id]
     add_index :driver_locations, [:tenant_id, :recorded_at]
-
-    add_index :surge_zones, [:tenant_id, :active_from, :active_until]
 
     add_index :driver_assignments, [:tenant_id, :ride_id]
     add_index :driver_assignments, [:tenant_id, :driver_id]

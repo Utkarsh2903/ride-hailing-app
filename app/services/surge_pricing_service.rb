@@ -46,16 +46,16 @@ class SurgePricingService < ApplicationService
     cache_key = "active_rides:#{@latitude}:#{@longitude}:#{radius_km}"
     
     Rails.cache.fetch(cache_key, expires_in: 30.seconds) do
-      Ride.active
-          .where(
-            "ST_DWithin(
-              pickup_location,
-              ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
-              ?
-            )",
-            @longitude, @latitude, radius_km * 1000
-          )
-          .count
+      # Get active rides and filter by distance using Haversine formula
+      active_rides = Ride.active
+      
+      active_rides.select do |ride|
+        distance = calculate_distance(
+          @latitude, @longitude,
+          ride.pickup_latitude, ride.pickup_longitude
+        )
+        distance <= radius_km
+      end.count
     end
   end
 
@@ -121,6 +121,26 @@ class SurgePricingService < ApplicationService
     else
       'Extreme demand - fares are at maximum'
     end
+  end
+
+  # Haversine formula for distance calculation
+  def calculate_distance(lat1, lon1, lat2, lon2)
+    return 0 if lat1 == lat2 && lon1 == lon2
+
+    rad_per_deg = Math::PI / 180
+    rm = 6371 # Earth radius in kilometers
+
+    dlat_rad = (lat2 - lat1) * rad_per_deg
+    dlon_rad = (lon2 - lon1) * rad_per_deg
+
+    lat1_rad = lat1 * rad_per_deg
+    lat2_rad = lat2 * rad_per_deg
+
+    a = Math.sin(dlat_rad / 2)**2 + 
+        Math.cos(lat1_rad) * Math.cos(lat2_rad) * Math.sin(dlon_rad / 2)**2
+    c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+
+    (rm * c).round(2)
   end
 end
 
