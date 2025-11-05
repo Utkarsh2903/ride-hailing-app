@@ -2,6 +2,6 @@
 production:
   adapter: postgis
   encoding: unicode
-  url: <%= ENV['DATABASE_URL'] %>
-  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  url: postgresql://postgres:QNLpCHrVBDEckrVuesjNQSGDVRHvShqa@ballast.proxy.rlwy.net:12444/railway
+  pool: 5
   schema_search_path: "public,postgis"
