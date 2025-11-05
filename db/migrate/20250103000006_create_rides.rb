@@ -7,13 +7,11 @@ class CreateRides < ActiveRecord::Migration[7.1]
       t.string :tier, null: false, default: 'standard'
       
       # Pickup location
-      t.st_point :pickup_location, geographic: true, null: false
       t.decimal :pickup_latitude, precision: 10, scale: 6, null: false
       t.decimal :pickup_longitude, precision: 10, scale: 6, null: false
       t.string :pickup_address
       
       # Dropoff location
-      t.st_point :dropoff_location, geographic: true, null: false
       t.decimal :dropoff_latitude, precision: 10, scale: 6, null: false
       t.decimal :dropoff_longitude, precision: 10, scale: 6, null: false
       t.string :dropoff_address
@@ -51,8 +49,8 @@ class CreateRides < ActiveRecord::Migration[7.1]
       t.index :tier
       t.index :requested_at
       t.index :idempotency_key, unique: true
-      t.index :pickup_location, using: :gist
-      t.index :dropoff_location, using: :gist
+      t.index [:pickup_latitude, :pickup_longitude]
+      t.index [:dropoff_latitude, :dropoff_longitude]
       t.index [:status, :requested_at]
       t.index [:rider_id, :created_at], order: { created_at: :desc }
       t.index [:driver_id, :created_at], order: { created_at: :desc }
