@@ -36,7 +36,10 @@ gem "newrelic_rpm", "~> 9.7"
 
 # Geospatial removed - using simple lat/lng with Haversine formula
 
-# API Documentation removed
+# API Documentation
+gem "rswag-api"
+gem "rswag-ui"
+gem "rswag-specs"
 
 # Validations
 gem "validates_timeliness", "~> 7.0.0.beta2"
