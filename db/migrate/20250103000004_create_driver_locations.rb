@@ -11,10 +11,10 @@ class CreateDriverLocations < ActiveRecord::Migration[7.1]
       
       t.timestamps
       
-      t.index :driver_id
-      t.index :recorded_at
-      t.index [:driver_id, :recorded_at], order: { recorded_at: :desc }
-      t.index [:latitude, :longitude]
+      t.index :driver_id, name: "index_locations_on_driver_id"
+      t.index :recorded_at, name: "index_locations_on_recorded_at"
+      t.index [:driver_id, :recorded_at], order: { recorded_at: :desc }, name: "index_driver_locations_on_driver_id_and_recorded_at_desc"
+      t.index [:latitude, :longitude], name: "index_driver_locations_on_latitude_and_longitude"
     end
   end
 end
