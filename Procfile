@@ -6,5 +6,5 @@ web: bundle exec puma -C config/puma.rb
 # 2️⃣ Worker process: background jobs
 worker: bundle exec sidekiq -C config/sidekiq.yml
 
-# 3️⃣ Release phase: database setup
-release: bundle exec rails db:prepare RAILS_ENV=production
+# 3️⃣ Release phase: database setup and seed
+release: bundle exec rails db:prepare RAILS_ENV=production && bundle exec rails db:seed RAILS_ENV=production

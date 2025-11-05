@@ -33,11 +33,9 @@ class Tenant < ApplicationRecord
   validates :slug, presence: true, uniqueness: true, format: { with: /\A[a-z0-9-]+\z/ }
   validates :name, presence: true, length: { minimum: 2, maximum: 255 }
   validates :subdomain, uniqueness: { allow_blank: true }, format: { with: /\A[a-z0-9-]+\z/, allow_blank: true }
-  validates :custom_domain, uniqueness: { allow_blank: true }
   validates :status, presence: true, inclusion: { in: %w[active inactive suspended trial] }
   validates :currency, format: { with: /\A[A-Z]{3}\z/, allow_blank: true }
   validates :country_code, format: { with: /\A[A-Z]{2,3}\z/, allow_blank: true }
-  validates :plan_type, inclusion: { in: %w[free starter growth enterprise], allow_blank: true }
 
   # Scopes
   scope :active, -> { where(status: 'active') }
@@ -104,43 +102,12 @@ class Tenant < ApplicationRecord
     status == 'trial'
   end
 
-  def subscription_active?
-    return true if subscription_ends_at.nil?
-    subscription_ends_at > Time.current
-  end
-
-  def subscription_expired?
-    !subscription_active?
-  end
-
-  def within_driver_limit?
-    max_drivers.nil? || drivers.count < max_drivers
-  end
-
-  def within_rider_limit?
-    max_riders.nil? || riders.count < max_riders
-  end
-
-  def within_ride_limit?
-    return true if max_rides_per_month.nil?
-    
-    rides.where('created_at >= ?', Time.current.beginning_of_month).count < max_rides_per_month
-  end
-
-  def feature_enabled?(feature_name)
-    features.dig(feature_name.to_s) == true
-  end
-
   def setting(key)
-    settings.dig(key.to_s)
+    settings&.dig(key.to_s)
   end
 
   def pricing_setting(key)
-    pricing_config.dig(key.to_s)
-  end
-
-  def branding_setting(key)
-    branding.dig(key.to_s)
+    pricing_config&.dig(key.to_s)
   end
 
   # Get base fare for tier
@@ -174,8 +141,6 @@ class Tenant < ApplicationRecord
   def set_defaults
     self.settings ||= default_settings
     self.pricing_config ||= default_pricing_config
-    self.branding ||= default_branding
-    self.features ||= default_features
     self.timezone ||= 'UTC'
     self.currency ||= 'USD'
     self.status ||= 'active'
@@ -225,24 +190,6 @@ class Tenant < ApplicationRecord
       'cancellation_fee' => 5.00,
       'surge_enabled' => true,
       'surge_max_multiplier' => 3.0
-    }
-  end
-
-  def default_branding
-    {
-      'primary_color' => '#000000',
-      'secondary_color' => '#FFFFFF',
-      'app_name' => 'RideHailing'
-    }
-  end
-
-  def default_features
-    {
-      'surge_pricing' => true,
-      'scheduled_rides' => false,
-      'ride_sharing' => false,
-      'cash_payments' => true,
-      'wallet_payments' => false
     }
   end
 end

@@ -9,6 +9,11 @@ module BaseValidator
   end
 
   class_methods do
+    # Class method to create from params
+    def from_params(params)
+      new(params.to_h.symbolize_keys)
+    end
+
     # Validate coordinates (latitude/longitude)
     def validates_coordinate(attribute, type:)
       validates attribute, presence: { message: "is required" }
@@ -66,33 +71,6 @@ module BaseValidator
                   message: "must be a valid email address"
                 },
                 length: { maximum: 255 }
-    end
-  end
-
-  # Convert to hash (removes nil values)
-  def to_h
-    attributes.each_with_object({}) do |(key, value), hash|
-      hash[key.to_sym] = value if value.present?
-    end
-  end
-
-  # Class method to create from params
-  def self.included(base)
-    base.extend(ClassMethods)
-  end
-
-  module ClassMethods
-    def from_params(params)
-      new(params.to_h)
-    end
-  end
-
-  private
-
-  # Helper to get all attributes dynamically
-  def attributes
-    self.class.attribute_names.each_with_object({}) do |attr, hash|
-      hash[attr] = public_send(attr)
     end
   end
 end
