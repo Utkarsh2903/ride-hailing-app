@@ -4,7 +4,6 @@
 #
 #  id          :uuid             not null, primary key
 #  driver_id   :uuid             not null
-#  location    :geography        point, 4326
 #  latitude    :decimal(10, 6)   not null
 #  longitude   :decimal(10, 6)   not null
 #  bearing     :decimal(5, 2)
@@ -26,32 +25,27 @@ class DriverLocation < ApplicationRecord
   validates :longitude, numericality: { greater_than_or_equal_to: -180, less_than_or_equal_to: 180 }
   validates :recorded_at, presence: true
 
-  # Callbacks
-  before_save :set_location_point
-
   # Scopes
   scope :recent, -> { order(recorded_at: :desc) }
   scope :since, ->(time) { where('recorded_at >= ?', time) }
-  scope :within_radius, ->(lat, lng, radius_km) {
-    where(
-      "ST_DWithin(location, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?)",
-      lng, lat, radius_km * 1000
-    )
-  }
 
-  # Class methods
+  # Class methods - using Haversine formula for distance calculations
   def self.nearby_drivers(latitude, longitude, radius_km = 5, limit = 20)
-    within_radius(latitude, longitude, radius_km)
-      .joins(:driver)
+    # Get all recent driver locations and filter by distance
+    all_locations = joins(:driver)
       .where(drivers: { status: 'online' })
-      .select("driver_locations.*, 
-               ST_Distance(location, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography) as distance",
-              longitude, latitude)
-      .order('distance ASC')
-      .limit(limit)
+      .recent
+    
+    # Calculate distance for each and filter
+    nearby = all_locations.select do |location|
+      location.distance_to(latitude, longitude) <= radius_km
+    end
+    
+    # Sort by distance and limit
+    nearby.sort_by { |loc| loc.distance_to(latitude, longitude) }.take(limit)
   end
 
-  # Instance methods
+  # Instance methods - Haversine formula for distance calculation
   def distance_to(latitude, longitude)
     return nil unless self.latitude && self.longitude
 
@@ -68,12 +62,6 @@ class DriverLocation < ApplicationRecord
     c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 
     (rm * c).round(2)
-  end
-
-  private
-
-  def set_location_point
-    self.location = "POINT(#{longitude} #{latitude})"
   end
 end
 

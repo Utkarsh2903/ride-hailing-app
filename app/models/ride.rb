@@ -7,11 +7,9 @@
 #  driver_id           :uuid
 #  status              :string           default("requested"), not null
 #  tier                :string           default("standard"), not null
-#  pickup_location     :geography        point, 4326
 #  pickup_latitude     :decimal(10, 6)   not null
 #  pickup_longitude    :decimal(10, 6)   not null
 #  pickup_address      :string
-#  dropoff_location    :geography        point, 4326
 #  dropoff_latitude    :decimal(10, 6)   not null
 #  dropoff_longitude   :decimal(10, 6)   not null
 #  dropoff_address     :string

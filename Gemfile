@@ -34,10 +34,7 @@ gem "hiredis-client", "~> 0.22"
 # Monitoring
 gem "newrelic_rpm", "~> 9.7"
 
-# Geospatial
-gem "rgeo", "~> 3.0"
-gem "rgeo-geojson", "~> 2.1"
-gem "activerecord-postgis-adapter", "~> 9.0"
+# Geospatial removed - using simple lat/lng with Haversine formula
 
 # API Documentation removed
 
