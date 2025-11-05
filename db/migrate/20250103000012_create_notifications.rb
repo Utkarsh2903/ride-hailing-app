@@ -15,9 +15,9 @@ class CreateNotifications < ActiveRecord::Migration[7.1]
       
       t.index :user_id, name: "idx_notifications_user_id"
       t.index :notification_type, name: "idx_notifications_type"
-      t.index :read, name: "idx_notifications_read"
+      t.index :read_at, name: "idx_notifications_read_at"
       t.index :created_at, name: "idx_notifications_created_at"
-      t.index [:user_id, :read, :created_at], name: "idx_notifications_user_read_created"
+      t.index [:user_id, :read_at, :created_at], name: "idx_notifications_user_read_created"
     end
   end
 end
