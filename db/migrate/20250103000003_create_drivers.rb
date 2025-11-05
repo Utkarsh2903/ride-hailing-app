@@ -23,7 +23,6 @@ class CreateDrivers < ActiveRecord::Migration[7.1]
       t.timestamps
       
       t.index :license_number, unique: true, name: 'idx_drivers_license_unique'
-      t.index :vehicle_plate, unique: true, name: 'idx_drivers_vehicle_plate_unique'
       t.index :status, name: 'idx_drivers_on_status'
       t.index :rating, name: 'idx_drivers_on_rating'
       t.index :last_active_at, name: 'idx_drivers_on_last_active'
