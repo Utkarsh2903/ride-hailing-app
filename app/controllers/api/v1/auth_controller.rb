@@ -54,14 +54,14 @@ module Api
       private
 
       def user_params
-        params.require(:user).permit(
+        params.permit(
           :email,
           :phone,
           :password,
           :password_confirmation,
-          :first_name,
-          :last_name,
-          :role
+          :name,
+          :role,
+          driver_attributes: [:license_number, :vehicle_type, :vehicle_model]
         )
       end
     end

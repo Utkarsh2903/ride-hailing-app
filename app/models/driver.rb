@@ -21,8 +21,7 @@ class Driver < ApplicationRecord
   include AASM
   include TenantScoped
 
-  # Enums
-  enum vehicle_type: { economy: 0, standard: 1, premium: 2, suv: 3, luxury: 4 }
+  VALID_VEHICLE_TYPES = %w[sedan suv economy standard premium luxury].freeze
 
   # Associations
   belongs_to :user
@@ -33,9 +32,8 @@ class Driver < ApplicationRecord
   has_many :payments, dependent: :nullify
 
   # Validations
-  validates :license_number, presence: true, uniqueness: true
-  validates :vehicle_plate, presence: true, uniqueness: true
-  validates :vehicle_year, numericality: { only_integer: true, greater_than: 1990, less_than_or_equal_to: -> { Time.current.year + 1 } }, allow_nil: true
+  validates :license_number, presence: true, uniqueness: { scope: :tenant_id }
+  validates :vehicle_type, presence: true, inclusion: { in: VALID_VEHICLE_TYPES }
   validates :rating, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 5 }
 
   # State Machine
@@ -92,13 +90,15 @@ class Driver < ApplicationRecord
   end
 
   def acceptance_rate
-    return 100.0 if total_trips.zero?
-    (accepted_trips.to_f / total_trips * 100).round(2)
+    total = accepted_trips + cancelled_trips
+    return 100.0 if total.zero?
+    (accepted_trips.to_f / total * 100).round(2)
   end
 
   def cancellation_rate
-    return 0.0 if completed_trips.zero?
-    (cancelled_trips.to_f / (completed_trips + cancelled_trips) * 100).round(2)
+    total = completed_trips + cancelled_trips
+    return 0.0 if total.zero?
+    (cancelled_trips.to_f / total * 100).round(2)
   end
 end
 

@@ -8,7 +8,6 @@
 #  completed_trips          :integer          default(0)
 #  cancelled_trips          :integer          default(0)
 #  preferred_payment_method :string           default("card")
-#  saved_addresses          :jsonb
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
 #
@@ -16,8 +15,7 @@
 class Rider < ApplicationRecord
   include TenantScoped
 
-  # Enums
-  enum preferred_payment_method: { card: 0, cash: 1, wallet: 2 }
+  VALID_PAYMENT_METHODS = %w[card cash wallet].freeze
 
   # Associations
   belongs_to :user
@@ -27,10 +25,11 @@ class Rider < ApplicationRecord
 
   # Validations
   validates :rating, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 5 }
+  validates :preferred_payment_method, inclusion: { in: VALID_PAYMENT_METHODS }, allow_nil: true
 
   # Scopes
   scope :high_rated, -> { where('rating >= ?', 4.5) }
-  scope :frequent, -> { where('total_trips >= ?', 10) }
+  scope :frequent, -> { where('completed_trips >= ?', 10) }
   scope :recent, -> { order(created_at: :desc) }
 
   # Instance methods

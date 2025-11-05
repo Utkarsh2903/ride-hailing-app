@@ -27,11 +27,13 @@ class User < ApplicationRecord
   has_one :rider, dependent: :destroy
   has_many :notifications, dependent: :destroy
 
+  # Nested attributes for driver registration
+  accepts_nested_attributes_for :driver
+
   # Validations
-  validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
-  validates :phone, presence: true, uniqueness: true, format: { with: /\A\+?[1-9]\d{1,14}\z/ }
-  validates :first_name, presence: true, length: { minimum: 2, maximum: 50 }
-  validates :last_name, presence: true, length: { minimum: 2, maximum: 50 }
+  validates :email, presence: true, uniqueness: { scope: :tenant_id }, format: { with: URI::MailTo::EMAIL_REGEXP }
+  validates :phone, presence: true, uniqueness: { scope: :tenant_id }, format: { with: /\A\+?[1-9]\d{1,14}\z/ }
+  validates :name, presence: true, length: { minimum: 2, maximum: 100 }
 
   # Scopes
   scope :recent, -> { order(created_at: :desc) }
@@ -39,16 +41,11 @@ class User < ApplicationRecord
   # Callbacks
   after_create :create_role_specific_record
 
-  # Instance methods
-  def full_name
-    "#{first_name} #{last_name}"
-  end
-
   private
 
   def create_role_specific_record
     create_rider! if rider? && rider.blank?
-    # Driver record created manually with vehicle info
+    # Driver record created via nested attributes
   end
 end
 
