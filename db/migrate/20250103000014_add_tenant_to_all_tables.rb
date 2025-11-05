@@ -33,7 +33,7 @@ class AddTenantToAllTables < ActiveRecord::Migration[7.1]
     add_index :rides, [:tenant_id, :created_at], name: "idx_rides_tenant_created"
 
     add_index :trips, [:tenant_id, :status], name: "idx_trips_tenant_status"
-    add_index :trips, [:tenant_id, :driver_id], name: "idx_trips_tenant_driver"
+    add_index :trips, [:tenant_id, :ride_id], name: "idx_trips_tenant_ride"
 
     add_index :payments, [:tenant_id, :status], name: "idx_payments_tenant_status"
     add_index :payments, [:tenant_id, :rider_id], name: "idx_payments_tenant_rider"
