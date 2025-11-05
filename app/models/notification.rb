@@ -8,7 +8,6 @@
 #  title             :string           not null
 #  body              :text
 #  data              :jsonb
-#  read              :boolean          default(FALSE)
 #  read_at           :datetime
 #  channel           :string
 #  status            :string           default("pending")

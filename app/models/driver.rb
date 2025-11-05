@@ -7,11 +7,8 @@
 #  license_number    :string           not null
 #  vehicle_type      :string           not null
 #  vehicle_model     :string
-#  vehicle_plate     :string           not null
-#  vehicle_year      :integer
 #  status            :string           default("offline"), not null
 #  rating            :decimal(3, 2)    default(5.0)
-#  total_trips       :integer          default(0)
 #  accepted_trips    :integer          default(0)
 #  completed_trips   :integer          default(0)
 #  cancelled_trips   :integer          default(0)
